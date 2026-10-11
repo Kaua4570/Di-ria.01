@@ -121,6 +121,27 @@
     return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
   };
 
+  // Texto digitado pelo usuário (nome/ID da rota) entra no HTML dos cartões,
+  // então sempre passa por aqui antes, para não quebrar a tela.
+  const escapeHtml = (value) => String(value == null ? '' : value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+
+  // Etiquetas com o nome e o ID da rota (vazio se a rota não tiver nenhum).
+  const routeChipsHtml = (r) => {
+    const nome = r && r.nomeRota ? String(r.nomeRota).trim() : '';
+    const idRota = r && r.idRota ? String(r.idRota).trim() : '';
+    if (!nome && !idRota) return '';
+    return `<div class="route-chips">${
+      nome ? `<span class="route-chip">${escapeHtml(nome)}</span>` : ''
+    }${
+      idRota ? `<span class="route-chip route-chip--id">ID ${escapeHtml(idRota)}</span>` : ''
+    }</div>`;
+  };
+
   const clampNum = (v, fallback = 0) => {
     const n = parseFloat(v);
     return Number.isFinite(n) && n >= 0 ? n : fallback;
@@ -559,6 +580,8 @@
     routeKm: $('#route-km'),
     routeParadas: $('#route-paradas'),
     routeConsumo: $('#route-consumo'),
+    routeNome: $('#route-nome'),
+    routeIdRota: $('#route-id'),
     routeFeriado: $('#route-feriado'),
     routeFeriadoLabel: $('#route-feriado-label'),
     btnEditFeriadoPct: $('#btn-edit-feriado-pct'),
@@ -771,6 +794,7 @@
       item.className = 'route-item';
       item.innerHTML = `
         <div class="route-item__info">
+          ${routeChipsHtml(r)}
           <span class="route-item__title">${r.km} km \u00B7 ${r.paradas} parada${r.paradas === 1 ? '' : 's'}</span>
           <span class="route-item__meta">Bruto ${fmtBRL(r.faturamento)} \u00B7 Combust. ${fmtBRL(r.combustivel)}${r.feriado ? ` \u00B7 Feriado (+${fmtPctInt(r.feriadoPct != null ? r.feriadoPct : FERIADO_PCT_PADRAO)}%)` : ''}</span>
         </div>
@@ -917,6 +941,8 @@
     els.routeKm.value = '';
     els.routeParadas.value = '';
     els.routeConsumo.value = lastConsumoUsado != null ? lastConsumoUsado : '';
+    els.routeNome.value = '';
+    els.routeIdRota.value = '';
     els.routeFeriado.checked = false;
     els.feriadoPctField.style.display = 'none';
     els.routeFeriadoPct.value = '';
@@ -959,10 +985,14 @@
     const { valorKm, valorParadas, faturamento, combustivel, retencoes, lucro, precoUsado } =
       calcRoute({ km, paradas, feriado, feriadoPct, vehicle, consumo });
 
+    const nomeRota = els.routeNome.value.trim().slice(0, 30);
+    const idRota = els.routeIdRota.value.trim().slice(0, 30);
+
     const key = routeTargetKey || todayKey();
     const day = getDay(key);
     day.routes.push({
       id: uid(),
+      nomeRota, idRota,
       km, paradas, feriado, feriadoPct, vehicle, consumo,
       valorKm, valorParadas, faturamento,
       combustivel, retencoes, lucro, precoUsado,
@@ -1281,6 +1311,7 @@
           item.className = 'qr-item';
           item.innerHTML = `
             <div>
+              ${routeChipsHtml(r)}
               <p class="qr-item__main">Rota ${i + 1} \u00b7 ${fmtKM(r.km)}</p>
               <p class="qr-item__meta">Faturamento ${fmtBRL(r.faturamento)}</p>
             </div>
@@ -1575,6 +1606,7 @@
             <svg viewBox="0 0 24 24" width="16" height="16"><path d="M5 6h14M9 6V4h6v2M7 6l1 14h8l1-14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </button>
         </div>
+        ${routeChipsHtml(r)}
         <div class="route-tag__grid">
           <div><span>KM</span><b>${fmtKM(r.km)}</b></div>
           <div><span>Faturamento</span><b>${fmtBRL(r.faturamento)}</b></div>
